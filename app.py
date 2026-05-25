@@ -86,7 +86,7 @@ def auditar():
 
     nome_excel    = f'auditoria_o2_{session_id}.xlsx'
     caminho_excel = os.path.join(REPORTS_DIR, nome_excel)
-    gerar_excel(resultado, caminho_excel, nome_original, empresa)
+    gerar_excel(resultado, caminho_excel, nome_original, empresa, source_path=caminho_upload)
     os.remove(caminho_upload)
 
     rid = salvar_relatorio(

@@ -59,6 +59,22 @@ def _linha_arquivo_grupo(df_grupo):
         return 'N/D'
 
 
+def _aba_arquivo_row(row):
+    v = row.get('__aba_arquivo_origem')
+    if pd.isna(v):
+        return 'N/D'
+    return str(v)
+
+
+def _aba_arquivo_grupo(df_grupo):
+    if '__aba_arquivo_origem' not in df_grupo.columns or df_grupo.empty:
+        return 'N/D'
+    v = df_grupo['__aba_arquivo_origem'].iloc[0]
+    if pd.isna(v):
+        return 'N/D'
+    return str(v)
+
+
 def carregar_df(filepath):
     aliases = {
         'Data de Emissão (completa)': [
@@ -78,10 +94,14 @@ def carregar_df(filepath):
     melhor_df = None
     melhor_faltantes = obrigatorias[:]
 
+    xls = pd.ExcelFile(filepath)
+    aba_origem = xls.sheet_names[0] if xls.sheet_names else 'Planilha1'
+
     # Omie pode exportar com variações de linhas acima do cabeçalho.
     for skip in (0, 1, 2, 3):
-        cand = pd.read_excel(filepath, skiprows=skip, header=0)
+        cand = pd.read_excel(xls, sheet_name=0, skiprows=skip, header=0)
         cand['__linha_arquivo'] = cand.index + skip + 2
+        cand['__aba_arquivo_origem'] = aba_origem
         cand = _aplicar_alias_colunas(cand, aliases)
         faltantes = [c for c in obrigatorias if c not in cand.columns]
         if not faltantes:
@@ -125,6 +145,7 @@ def regra_emissao_maior_vencimento(df):
             'regra': 'Data de Emissão > Data de Vencimento (+60 dias)',
             'severidade': 'CRÍTICO',
             'linha_arquivo': _linha_arquivo_row(row),
+            'aba_arquivo_origem': _aba_arquivo_row(row),
             'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
             'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
             'valor': row.get('Valor da Conta', 0),
@@ -152,6 +173,7 @@ def regra_vencimento_igual_emissao(df):
             'regra': 'Data de Vencimento = Data de Emissão',
             'severidade': 'MÉDIO',
             'linha_arquivo': _linha_arquivo_row(row),
+            'aba_arquivo_origem': _aba_arquivo_row(row),
             'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
             'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
             'valor': row.get('Valor da Conta', 0),
@@ -180,6 +202,7 @@ def regra_vencimento_maior_emissao(df):
             'regra': 'Data de Vencimento > Data de Emissão (+60 dias)',
             'severidade': 'BAIXO',
             'linha_arquivo': _linha_arquivo_row(row),
+            'aba_arquivo_origem': _aba_arquivo_row(row),
             'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
             'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
             'valor': row.get('Valor da Conta', 0),
@@ -212,6 +235,7 @@ def regra_sinal_errado(df):
                 'regra': 'Sinal de Valor Incorreto',
                 'severidade': 'CRÍTICO',
                 'linha_arquivo': _linha_arquivo_row(row),
+                'aba_arquivo_origem': _aba_arquivo_row(row),
                 'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
                 'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
                 'valor': valor,
@@ -263,6 +287,7 @@ def regra_duplicatas(df):
             'regra': 'Lançamento Duplicado',
             'severidade': 'ALTO',
             'linha_arquivo': _linha_arquivo_row(row),
+            'aba_arquivo_origem': _aba_arquivo_row(row),
             'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
             'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
             'valor': row.get('Valor da Conta', 0),
@@ -304,6 +329,7 @@ def regra_recorrencia_quebrada(df):
                     'regra': 'Recorrência Quebrada',
                     'severidade': 'MÉDIO',
                     'linha_arquivo': _linha_arquivo_grupo(grupo_f),
+                    'aba_arquivo_origem': _aba_arquivo_grupo(grupo_f),
                     'fornecedor': fornecedor,
                     'cnpj': limpar_valor(cnpj) or 'N/D',
                     'valor': valor_medio,
@@ -339,6 +365,7 @@ def regra_categoria_inconsistente(df):
                 'regra': 'Categoria Inconsistente por Fornecedor',
                 'severidade': 'ALTO',
                 'linha_arquivo': _linha_arquivo_grupo(grupo),
+                'aba_arquivo_origem': _aba_arquivo_grupo(grupo),
                 'fornecedor': fornecedor,
                 'cnpj': limpar_valor(cnpj) or 'N/D',
                 'valor': valor_total,
@@ -377,6 +404,7 @@ def regra_outlier_valor(df):
                 'regra': 'Valor Atípico (Outlier)',
                 'severidade': 'ALTO',
                 'linha_arquivo': _linha_arquivo_row(row),
+                'aba_arquivo_origem': _aba_arquivo_row(row),
                 'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
                 'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
                 'valor': row.get('Valor da Conta', 0),
@@ -424,6 +452,7 @@ def regra_parcelas_incompletas(df):
                 'regra': 'Parcelas Incompletas',
                 'severidade': 'MÉDIO',
                 'linha_arquivo': _linha_arquivo_grupo(grupo),
+                'aba_arquivo_origem': _aba_arquivo_grupo(grupo),
                 'fornecedor': fornecedor,
                 'cnpj': limpar_valor(cnpj) or 'N/D',
                 'valor': valor_medio,
@@ -463,6 +492,7 @@ def regra_competencia_distante(df, usar_registro_como_competencia=False):
             'regra': 'Competência x Registro Distantes',
             'severidade': 'MÉDIO',
             'linha_arquivo': _linha_arquivo_row(row),
+            'aba_arquivo_origem': _aba_arquivo_row(row),
             'fornecedor': limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
             'cnpj': limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
             'valor': row.get('Valor da Conta', 0),
@@ -516,6 +546,7 @@ def regra_parcelas_data_registro_identica(df):
                 'regra': 'Data de Registro Replicada (Bug Omie)',
                 'severidade': 'MÉDIO',
                 'linha_arquivo': _linha_arquivo_grupo(grupo),
+                'aba_arquivo_origem': _aba_arquivo_grupo(grupo),
                 'fornecedor': fornecedor,
                 'cnpj': limpar_valor(cnpj) or 'N/D',
                 'valor': valor_medio,
@@ -596,6 +627,7 @@ def regra_juros_sem_amortizacao(df):
                 'regra': 'Juros não Separados da Amortização',
                 'severidade': 'ALTO',
                 'linha_arquivo': _linha_arquivo_grupo(grupo),
+                'aba_arquivo_origem': _aba_arquivo_grupo(grupo),
                 'fornecedor': fornecedor,
                 'cnpj': limpar_valor(cnpj) or 'N/D',
                 'valor': total_valor,
@@ -694,6 +726,7 @@ def regra_categoria_semantica(df):
                 'regra':          'Categoria Semanticamente Incorreta',
                 'severidade':     'ALTO',
                 'linha_arquivo':  _linha_arquivo_row(row),
+                'aba_arquivo_origem': _aba_arquivo_row(row),
                 'fornecedor':     limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
                 'cnpj':           limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
                 'valor':          row.get('Valor da Conta', 0),

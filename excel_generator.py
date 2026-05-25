@@ -5,6 +5,7 @@ Aba 1: Resumo Executivo | Abas seguintes: uma por regra de auditoria
 from collections import defaultdict
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+import pandas as pd
 
 # ─── Paleta O2 (sem #) ────────────────────────────────────────────────────────
 C_VERDE       = '6CF269'
@@ -250,6 +251,25 @@ def _tab_name(nome_regra):
     return sanitized[:31]
 
 
+def _criar_aba_base_analisada(wb, source_path):
+    if not source_path:
+        return None
+    try:
+        base_df = pd.read_excel(source_path, sheet_name=0, header=None)
+    except Exception:
+        return None
+
+    ws = wb.create_sheet('Base Analisada')
+    ws.sheet_view.showGridLines = True
+
+    for r_idx, row_vals in enumerate(base_df.itertuples(index=False, name=None), start=1):
+        for c_idx, val in enumerate(row_vals, start=1):
+            ws.cell(row=r_idx, column=c_idx, value=val)
+
+    ws.freeze_panes = ws['A2']
+    return ws.title
+
+
 # ─── Aba de Resumo Executivo ──────────────────────────────────────────────────
 
 def _criar_resumo(wb, resultado, nome_arquivo, empresa):
@@ -376,18 +396,18 @@ def _criar_resumo(wb, resultado, nome_arquivo, empresa):
 
 # ─── Aba por regra ────────────────────────────────────────────────────────────
 
-def _criar_aba_regra(wb, nome_regra, erros):
+def _criar_aba_regra(wb, nome_regra, erros, source_path='', source_sheet_name=''):
     ws = wb.create_sheet(_tab_name(nome_regra))
     ws.sheet_view.showGridLines = False
 
-    # Larguras: Sev | Fornecedor | CNPJ | Linha | Valor | Emissão | Vencimento | Categoria | Evidência
-    for letra, w in zip('ABCDEFGHI', [14, 35, 22, 12, 16, 16, 16, 26, 44]):
+    # Larguras: Sev | Fornecedor | CNPJ | Linha | Aba origem | Link origem | Valor | Emissão | Vencimento | Categoria | Evidência
+    for letra, w in zip('ABCDEFGHIJK', [14, 34, 22, 10, 22, 16, 16, 16, 16, 24, 38]):
         ws.column_dimensions[letra].width = w
 
     row = 1
 
     # Cabeçalho da aba
-    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=9)
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=11)
     ws.row_dimensions[row].height = 32
     qtd = len(erros)
     c = ws.cell(row=row, column=1,
@@ -401,7 +421,7 @@ def _criar_aba_regra(wb, nome_regra, erros):
     if expl:
         # Títulos
         ws.row_dimensions[row].height = 16
-        for col_s, col_e, titulo in [(1, 3, 'O QUE É'), (4, 5, 'POR QUE IMPORTA'), (6, 9, 'COMO CORRIGIR')]:
+        for col_s, col_e, titulo in [(1, 4, 'O QUE É'), (5, 7, 'POR QUE IMPORTA'), (8, 11, 'COMO CORRIGIR')]:
             ws.merge_cells(start_row=row, start_column=col_s, end_row=row, end_column=col_e)
             c = ws.cell(row=row, column=col_s, value=titulo)
             c.fill = _fill(C_CINZA_CLARO); c.font = _font(bold=True, color=C_CINZA_ESC, size=8)
@@ -410,7 +430,7 @@ def _criar_aba_regra(wb, nome_regra, erros):
 
         # Conteúdo
         ws.row_dimensions[row].height = 72
-        for col_s, col_e, chave in [(1, 3, 'o_que_e'), (4, 5, 'por_que_importa'), (6, 9, 'como_corrigir')]:
+        for col_s, col_e, chave in [(1, 4, 'o_que_e'), (5, 7, 'por_que_importa'), (8, 11, 'como_corrigir')]:
             ws.merge_cells(start_row=row, start_column=col_s, end_row=row, end_column=col_e)
             c = ws.cell(row=row, column=col_s, value=expl.get(chave, ''))
             c.fill = _fill('FAFAFA'); c.font = _font(size=8, color=C_TEXTO)
@@ -419,7 +439,8 @@ def _criar_aba_regra(wb, nome_regra, erros):
 
     # Cabeçalho da tabela
     cabecalhos = ['Severidade', 'Fornecedor / Cliente', 'CNPJ/CPF',
-                  'Linha (arquivo)', 'Valor', 'Data Emissão (arquivo)', 'Data Vencimento (arquivo)', 'Categoria', 'Evidência']
+                  'Linha (arquivo)', 'Aba origem', 'Link origem', 'Valor',
+                  'Data Emissão (arquivo)', 'Data Vencimento (arquivo)', 'Categoria', 'Evidência']
     ws.row_dimensions[row].height = 18
     for col_idx, cab in enumerate(cabecalhos, 1):
         c = ws.cell(row=row, column=col_idx, value=cab)
@@ -438,6 +459,7 @@ def _criar_aba_regra(wb, nome_regra, erros):
         fornecedor = str(erro.get('fornecedor', 'N/D'))
         cnpj       = str(erro.get('cnpj', 'N/D'))
         linha      = erro.get('linha_arquivo', 'N/D')
+        aba_origem = str(erro.get('aba_arquivo_origem', 'N/D'))
         data_e     = str(erro.get('data_emissao', 'N/D'))
         data_v     = str(erro.get('data_vencimento', 'N/D'))
         categoria  = str(erro.get('categoria', 'N/D'))
@@ -455,30 +477,49 @@ def _criar_aba_regra(wb, nome_regra, erros):
             (2, fornecedor,'left',   _font(size=9), True),
             (3, cnpj,      'center', _font(size=9), False),
             (4, linha,     'center', _font(size=9), False),
-            (5, valor,     'right',  _font(size=9), False),
-            (6, data_e,    'center', _font(size=9), False),
-            (7, data_v,    'center', _font(size=9), False),
-            (8, categoria, 'left',   _font(size=9), True),
-            (9, detalhe,   'left',   _font(size=9), True),
+            (5, aba_origem,'left',   _font(size=9), False),
+            (6, '',        'center', _font(size=9), False),
+            (7, valor,     'right',  _font(size=9), False),
+            (8, data_e,    'center', _font(size=9), False),
+            (9, data_v,    'center', _font(size=9), False),
+            (10, categoria,'left',   _font(size=9), True),
+            (11, detalhe,  'left',   _font(size=9), True),
         ]
         for col_idx, val, h_align, fnt, wrap in defs:
             c = ws.cell(row=row, column=col_idx, value=val)
             c.fill = _fill(bg); c.font = fnt; c.border = _border()
             c.alignment = _align(h_align, 'center' if not wrap else 'top', wrap=wrap)
 
+        # Link direto para a linha no arquivo de origem (quando disponível)
+        linha_int = linha if isinstance(linha, int) else None
+        if linha_int is None:
+            try:
+                linha_int = int(linha)
+            except (TypeError, ValueError):
+                linha_int = None
+        if source_sheet_name and linha_int:
+            addr = f"#'{source_sheet_name}'!A{linha_int}"
+            cell_link = ws.cell(row=row, column=6, value='Abrir linha')
+            cell_link.hyperlink = addr
+            cell_link.style = 'Hyperlink'
+            cell_link.fill = _fill(bg)
+            cell_link.border = _border()
+            cell_link.alignment = _align('center', 'center')
+
         # Formato moeda para a coluna Valor
         if isinstance(valor, float):
-            ws.cell(row=row, column=5).number_format = '#,##0.00'
+            ws.cell(row=row, column=7).number_format = '#,##0.00'
 
         row += 1
 
 
 # ─── Função principal ─────────────────────────────────────────────────────────
 
-def gerar_excel(resultado, output_path, nome_arquivo_origem='', empresa=''):
+def gerar_excel(resultado, output_path, nome_arquivo_origem='', empresa='', source_path=''):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)  # remove aba vazia padrão
 
+    source_sheet_name = _criar_aba_base_analisada(wb, source_path)
     _criar_resumo(wb, resultado, nome_arquivo_origem, empresa)
 
     erros = resultado.get('erros', [])
@@ -487,7 +528,13 @@ def gerar_excel(resultado, output_path, nome_arquivo_origem='', empresa=''):
         erros_por_regra[e['regra']].append(e)
 
     for nome_regra in sorted(erros_por_regra, key=lambda r: -len(erros_por_regra[r])):
-        _criar_aba_regra(wb, nome_regra, erros_por_regra[nome_regra])
+        _criar_aba_regra(
+            wb,
+            nome_regra,
+            erros_por_regra[nome_regra],
+            source_path=source_path,
+            source_sheet_name=source_sheet_name or '',
+        )
 
     wb.save(output_path)
     return output_path
