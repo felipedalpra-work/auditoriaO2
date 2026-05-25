@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>O2 Inc — Histórico de Auditorias</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #F0F4FA;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: #1B3A6B;
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .logo { color: white; font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    header .logo span { color: #5DADE2; }
+    header .tagline { color: #A9CCE3; font-size: 13px; }
+    header nav a {
+      color: #A9CCE3;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border: 1px solid #2E5FA0;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    header nav a:hover { background: #2E5FA0; color: white; }
+
+    .container { width: 100%; max-width: 960px; padding: 40px 20px; }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1B3A6B;
+      margin-bottom: 24px;
+    }
+
+    /* ── Empresas ── */
+    .empresas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .empresa-card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px 20px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      transition: all 0.2s;
+    }
+    .empresa-card:hover { border-color: #2E86C1; background: #F7FAFF; }
+    .empresa-card.active { border-color: #1B3A6B; background: #EAF3FB; }
+    .empresa-card .nome {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1B3A6B;
+      margin-bottom: 4px;
+    }
+    .empresa-card .meta { font-size: 12px; color: #888; }
+
+    /* ── Seção de relatórios ── */
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+    .card h3 { font-size: 17px; color: #1B3A6B; margin-bottom: 16px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #1B3A6B; color: white; }
+    thead th { padding: 10px 12px; text-align: left; font-weight: 600; }
+    tbody tr { border-bottom: 1px solid #EEE; }
+    tbody tr:hover { background: #F7FAFF; }
+    tbody td { padding: 10px 12px; color: #444; vertical-align: middle; }
+    .td-center { text-align: center; }
+
+    .badge {
+      display: inline-block;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      margin: 1px;
+    }
+    .b-critico { background: #C0392B; }
+    .b-alto    { background: #E67E22; }
+    .b-medio   { background: #B8860B; }
+    .b-total   { background: #1B3A6B; }
+
+    .btn-dl {
+      display: inline-block;
+      background: #27AE60;
+      color: white;
+      text-decoration: none;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-dl:hover { background: #1E8449; }
+
+    /* ── Comparação ── */
+    .comp-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .comp-header label { font-size: 13px; color: #555; font-weight: 600; }
+    .comp-header select {
+      padding: 7px 10px;
+      border: 2px solid #D0DCF0;
+      border-radius: 7px;
+      font-size: 13px;
+      color: #222;
+      background: white;
+      cursor: pointer;
+      outline: none;
+    }
+    .comp-header select:focus { border-color: #2E86C1; }
+    .vs { font-weight: 700; color: #1B3A6B; font-size: 15px; }
+
+    .comp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .comp-table thead tr { background: #1B3A6B; color: white; }
+    .comp-table thead th { padding: 10px 12px; text-align: left; font-weight: 600; }
+    .comp-table tbody tr { border-bottom: 1px solid #EEE; }
+    .comp-table tbody tr:hover { background: #FAFAFA; }
+    .comp-table tbody td { padding: 9px 12px; color: #444; }
+    .comp-table .section-row td {
+      background: #F0F4FA;
+      color: #1B3A6B;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      padding: 7px 12px;
+    }
+    .comp-table .indent { padding-left: 24px !important; }
+
+    .delta { font-weight: 700; }
+    .delta.melhor { color: #27AE60; }
+    .delta.pior   { color: #C0392B; }
+    .delta.neutro { color: #888; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 15px; }
+    .empty-state a {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: #1B3A6B;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .hidden { display: none; }
+
+    footer {
+      width: 100%;
+      text-align: center;
+      padding: 20px;
+      color: #AAA;
+      font-size: 12px;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">O2<span>.</span>INC</div>
+  <div class="tagline">Histórico de Auditorias</div>
+  <nav><a href="/">+ Nova Auditoria</a></nav>
+</header>
+
+<div class="container">
+
+  <div class="page-title">📊 Histórico por Empresa</div>
+
+  <!-- Estado vazio -->
+  <div id="emptyState" class="empty-state hidden">
+    <div class="icon">📁</div>
+    <p>Nenhuma auditoria realizada ainda.</p>
+    <a href="/">Fazer primeira auditoria</a>
+  </div>
+
+  <!-- Grid de empresas -->
+  <div id="empresasGrid" class="empresas-grid"></div>
+
+  <!-- Relatórios da empresa selecionada -->
+  <div id="relatoriosSection" class="hidden">
+    <div class="card">
+      <h3 id="relatoriosTitulo">Relatórios</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Data da Análise</th>
+            <th>Arquivo</th>
+            <th class="td-center">Lançamentos</th>
+            <th class="td-center">Inconsistências</th>
+            <th class="td-center">Severidades</th>
+            <th class="td-center">Download</th>
+          </tr>
+        </thead>
+        <tbody id="relatoriosTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparação -->
+  <div id="comparacaoSection" class="hidden">
+    <div class="card">
+      <h3>Comparação de Relatórios</h3>
+      <div class="comp-header">
+        <label>Relatório A:</label>
+        <select id="selectA" onchange="recarregarComparacao()"></select>
+        <span class="vs">vs</span>
+        <label>Relatório B:</label>
+        <select id="selectB" onchange="recarregarComparacao()"></select>
+      </div>
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th style="width:40%">Métrica</th>
+            <th id="thA" style="width:18%">Relatório A</th>
+            <th id="thB" style="width:18%">Relatório B</th>
+            <th style="width:24%">Variação</th>
+          </tr>
+        </thead>
+        <tbody id="compTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>O2 Inc — Assessoria Financeira | Sistema de Auditoria Automática</footer>
+
+<script>
+  let empresaSelecionada = null;
+  let relatoriosEmpresa  = [];
+
+  // ── Inicialização ───────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', carregarEmpresas);
+
+  async function carregarEmpresas() {
+    const res = await fetch('/api/empresas');
+    const empresas = await res.json();
+
+    if (empresas.length === 0) {
+      document.getElementById('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    const grid = document.getElementById('empresasGrid');
+    grid.innerHTML = empresas.map(e => `
+      <div class="empresa-card" id="card-${esc(e.empresa)}"
+           onclick="selecionarEmpresa('${esc(e.empresa)}')">
+        <div class="nome">${esc(e.empresa)}</div>
+        <div class="meta">
+          ${e.total_relatorios} relatório${e.total_relatorios !== 1 ? 's' : ''}
+          · último: ${formatData(e.ultima_analise)}
+        </div>
+      </div>
+    `).join('');
+
+    // Se só tem uma empresa, seleciona automaticamente
+    if (empresas.length === 1) selecionarEmpresa(empresas[0].empresa);
+  }
+
+  // ── Seleção de empresa ──────────────────────────────────────────────────────
+  async function selecionarEmpresa(empresa) {
+    // Atualiza estado visual
+    document.querySelectorAll('.empresa-card').forEach(c => c.classList.remove('active'));
+    const cardEl = document.getElementById('card-' + esc(empresa));
+    if (cardEl) cardEl.classList.add('active');
+
+    empresaSelecionada = empresa;
+
+    const res = await fetch('/api/relatorios?empresa=' + encodeURIComponent(empresa));
+    relatoriosEmpresa  = await res.json();
+
+    renderizarRelatorios();
+
+    if (relatoriosEmpresa.length >= 2) {
+      document.getElementById('comparacaoSection').classList.remove('hidden');
+      preencherSelects();
+      await recarregarComparacao();
+    } else {
+      document.getElementById('comparacaoSection').classList.add('hidden');
+    }
+  }
+
+  // ── Tabela de relatórios ────────────────────────────────────────────────────
+  function renderizarRelatorios() {
+    const section = document.getElementById('relatoriosSection');
+    section.classList.remove('hidden');
+    document.getElementById('relatoriosTitulo').textContent =
+      'Relatórios — ' + empresaSelecionada;
+
+    const tbody = document.getElementById('relatoriosTbody');
+    tbody.innerHTML = relatoriosEmpresa.map(r => {
+      const sev = r.por_severidade || {};
+      const crit = sev['CRÍTICO'] || 0;
+      const alto = sev['ALTO']    || 0;
+      const med  = sev['MÉDIO']   || 0;
+      return `
+        <tr>
+          <td>${formatData(r.data_analise)}</td>
+          <td>${esc(r.nome_arquivo_origem)}</td>
+          <td class="td-center">${r.total_lancamentos.toLocaleString('pt-BR')}</td>
+          <td class="td-center">
+            <span class="badge b-total">${r.total_erros}</span>
+          </td>
+          <td class="td-center">
+            ${crit > 0 ? `<span class="badge b-critico">${crit} crítico${crit !== 1 ? 's' : ''}</span>` : ''}
+            ${alto > 0 ? `<span class="badge b-alto">${alto} alto${alto !== 1 ? 's' : ''}</span>`     : ''}
+            ${med  > 0 ? `<span class="badge b-medio">${med} médio${med !== 1 ? 's' : ''}</span>`    : ''}
+            ${crit === 0 && alto === 0 && med === 0 ? '<span style="color:#888;font-size:12px;">—</span>' : ''}
+          </td>
+          <td class="td-center">
+            <a class="btn-dl" href="${r.download_url}" download>⬇ Excel</a>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── Selects de comparação ───────────────────────────────────────────────────
+  function preencherSelects() {
+    const opts = relatoriosEmpresa.map(r =>
+      `<option value="${r.id}">${formatData(r.data_analise)} — ${esc(r.nome_arquivo_origem)}</option>`
+    ).join('');
+
+    const selA = document.getElementById('selectA');
+    const selB = document.getElementById('selectB');
+    selA.innerHTML = opts;
+    selB.innerHTML = opts;
+
+    // Padrão: A = mais recente, B = segundo mais recente
+    selA.value = relatoriosEmpresa[0].id;
+    selB.value = relatoriosEmpresa[1].id;
+  }
+
+  async function recarregarComparacao() {
+    const id1 = document.getElementById('selectA').value;
+    const id2 = document.getElementById('selectB').value;
+    if (id1 === id2) {
+      document.getElementById('compTbody').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;color:#888;padding:20px;">Selecione dois relatórios diferentes.</td></tr>';
+      return;
+    }
+
+    const res  = await fetch(`/api/comparar?id1=${id1}&id2=${id2}`);
+    const data = await res.json();
+    if (data.erro) return;
+
+    renderizarComparacao(data);
+  }
+
+  // ── Renderiza tabela de comparação ─────────────────────────────────────────
+  function renderizarComparacao(data) {
+    const ra = data.relatorio_a;
+    const rb = data.relatorio_b;
+    const c  = data.comparacao;
+
+    document.getElementById('thA').textContent = formatData(ra.data_analise);
+    document.getElementById('thB').textContent = formatData(rb.data_analise);
+
+    const rows = [];
+
+    // ── Indicadores gerais
+    rows.push(sectionRow('INDICADORES GERAIS'));
+    rows.push(metricRow('Total de Lançamentos',       c.total_lancamentos, true));
+    rows.push(metricRow('Total de Inconsistências',   c.total_erros,       false));
+
+    // ── Por severidade
+    rows.push(sectionRow('POR SEVERIDADE'));
+    for (const sev of ['CRÍTICO', 'ALTO', 'MÉDIO', 'BAIXO']) {
+      if (c.por_severidade[sev]) {
+        rows.push(metricRow('└ ' + sev, c.por_severidade[sev], false, true));
+      }
+    }
+
+    // ── Por regra (ordenado pelo maior valor em A ou B)
+    rows.push(sectionRow('POR TIPO DE REGRA'));
+    const regras = Object.entries(c.por_regra)
+      .sort((x, y) => Math.max(y[1].a, y[1].b) - Math.max(x[1].a, x[1].b));
+    for (const [nome, vals] of regras) {
+      if (vals.a === 0 && vals.b === 0) continue;
+      rows.push(metricRow(nome, vals, false, true));
+    }
+
+    document.getElementById('compTbody').innerHTML = rows.join('');
+  }
+
+  function sectionRow(titulo) {
+    return `<tr class="section-row"><td colspan="4">${titulo}</td></tr>`;
+  }
+
+  function metricRow(label, vals, isNeutral, indent) {
+    const { a, b, delta, delta_pct } = vals;
+    let deltaHtml;
+    if (delta === 0) {
+      deltaHtml = `<span class="delta neutro">= 0</span>`;
+    } else if (isNeutral) {
+      const sign = delta > 0 ? '+' : '';
+      deltaHtml = `<span class="delta neutro">${sign}${delta.toLocaleString('pt-BR')}</span>`;
+    } else if (delta < 0) {
+      deltaHtml = `<span class="delta melhor">▼ ${Math.abs(delta)} (${Math.abs(delta_pct).toFixed(1)}%)</span>`;
+    } else {
+      deltaHtml = `<span class="delta pior">▲ +${delta} (+${delta_pct.toFixed(1)}%)</span>`;
+    }
+
+    const tdClass = indent ? 'indent' : '';
+    return `
+      <tr>
+        <td class="${tdClass}">${esc(label)}</td>
+        <td class="td-center">${a.toLocaleString('pt-BR')}</td>
+        <td class="td-center">${b.toLocaleString('pt-BR')}</td>
+        <td>${deltaHtml}</td>
+      </tr>
+    `;
+  }
+
+  // ── Utilitários ─────────────────────────────────────────────────────────────
+  function formatData(str) {
+    if (!str) return '—';
+    // Formato: "dd/mm/yyyy HH:MM" → mostra só "dd/mm/yyyy HH:MM"
+    return str.length > 16 ? str.slice(0, 16) : str;
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>O2 Inc — Auditoria de Lançamentos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #F0F4FA;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: #1B3A6B;
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .logo { color: white; font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    header .logo span { color: #5DADE2; }
+    header .tagline { color: #A9CCE3; font-size: 13px; }
+    header nav a {
+      color: #A9CCE3;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border: 1px solid #2E5FA0;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    header nav a:hover { background: #2E5FA0; color: white; }
+
+    .container {
+      width: 100%;
+      max-width: 760px;
+      padding: 40px 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+      padding: 40px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 { font-size: 20px; color: #1B3A6B; margin-bottom: 8px; }
+    .card p {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .field-group { margin-bottom: 20px; }
+    .field-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1B3A6B;
+      margin-bottom: 6px;
+    }
+    .field-group input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 2px solid #D0DCF0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #222;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .field-group input[type="text"]:focus { border-color: #2E86C1; }
+
+    .upload-area {
+      border: 2px dashed #2E86C1;
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #F7FAFF;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      background: #EAF3FB;
+      border-color: #1B3A6B;
+    }
+    .upload-area .icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-area p { margin: 0; color: #2E86C1; font-weight: 600; font-size: 15px; }
+    .upload-area small { color: #888; font-size: 12px; }
+
+    #fileInput { display: none; }
+
+    .file-name {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #1B3A6B;
+      font-weight: 600;
+      display: none;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 15px;
+      background: #1B3A6B;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .btn:hover { background: #2E86C1; }
+    .btn:disabled { background: #999; cursor: not-allowed; }
+
+    .loading { display: none; text-align: center; padding: 30px; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid #EAF3FB;
+      border-top-color: #1B3A6B;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .resultado { display: none; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat {
+      background: #F7FAFF;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      border-left: 4px solid #2E86C1;
+    }
+    .stat.critico { border-color: #C0392B; }
+    .stat.alto    { border-color: #E67E22; }
+    .stat.medio   { border-color: #F1C40F; }
+    .stat .num    { font-size: 32px; font-weight: 800; color: #1B3A6B; }
+    .stat.critico .num { color: #C0392B; }
+    .stat .label  { font-size: 12px; color: #666; margin-top: 4px; }
+
+    .regras-lista { list-style: none; }
+    .regras-lista li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #EEE;
+      font-size: 14px;
+      color: #444;
+    }
+    .regras-lista li:last-child { border-bottom: none; }
+    .regras-lista .badge {
+      background: #1B3A6B;
+      color: white;
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .btn-download {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: #27AE60;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.2s;
+      margin-top: 20px;
+    }
+    .btn-download:hover { background: #1E8449; }
+
+    .btn-novo {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: white;
+      color: #1B3A6B;
+      font-size: 14px;
+      font-weight: 600;
+      border: 2px solid #1B3A6B;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 12px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-novo:hover { background: #F0F4FA; }
+
+    .erro-msg {
+      display: none;
+      background: #FDEDEC;
+      border: 1px solid #E74C3C;
+      border-radius: 8px;
+      padding: 16px;
+      color: #C0392B;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    .regras-info {
+      background: #EAF3FB;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    .regras-info h4 { color: #1B3A6B; font-size: 13px; margin-bottom: 8px; }
+    .regras-info ul { list-style: none; }
+    .regras-info ul li {
+      font-size: 12px;
+      color: #444;
+      padding: 3px 0;
+      padding-left: 16px;
+      position: relative;
+    }
+    .regras-info ul li::before { content: '✓'; position: absolute; left: 0; color: #2E86C1; }
+
+    footer {
+      width: 100%;
+      text-align: center;
+      padding: 20px;
+      color: #AAA;
+      font-size: 12px;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">O2<span>.</span>INC</div>
+  <div class="tagline">Auditoria Inteligente de Lançamentos</div>
+  <nav><a href="/historico">📊 Histórico</a></nav>
+</header>
+
+<div class="container">
+
+  <!-- Upload card -->
+  <div class="card" id="uploadCard">
+    <h2>Auditoria de Lançamentos Omie</h2>
+    <p>Importe o relatório de Movimentação Financeira exportado do Omie em formato Excel (.xlsx).
+    O sistema analisa automaticamente os lançamentos e gera um relatório Excel com todas as inconsistências encontradas.</p>
+
+    <div class="field-group">
+      <label for="inputEmpresa">Empresa</label>
+      <input type="text" id="inputEmpresa" placeholder="Ex: Empresa ABC Ltda"
+             oninput="verificarCampos()" />
+    </div>
+
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📂</div>
+      <p>Clique para selecionar ou arraste o arquivo aqui</p>
+      <small>Formatos aceitos: .xlsx, .xls (máx. 50MB)</small>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <div class="file-name" id="fileName">📄 Nenhum arquivo selecionado</div>
+
+    <button class="btn" id="btnAuditar" onclick="iniciarAuditoria()" disabled>
+      ANALISAR LANÇAMENTOS
+    </button>
+
+    <div class="erro-msg" id="erroMsg"></div>
+
+    <div class="regras-info">
+      <h4>Regras de Auditoria Aplicadas (11 regras)</h4>
+      <ul>
+        <li>Data de emissão posterior à data de vencimento</li>
+        <li>Sinal de valor incorreto (Pagar positivo / Receber negativo)</li>
+        <li>Lançamentos duplicados (mesmo CNPJ, valor, data e parcela)</li>
+        <li>Recorrências mensais com mês faltando</li>
+        <li>Mesmo fornecedor categorizado de formas diferentes entre meses</li>
+        <li>Valor atípico — outlier em relação à média histórica do fornecedor</li>
+        <li>Série de parcelas com lacunas (ex: tem 1/12 e 3/12, falta 2/12)</li>
+        <li>Emissão e registro distam mais de 60 dias (lançamento no mês errado)</li>
+        <li>Data de registro idêntica em todas as parcelas (bug de replicação do Omie)</li>
+        <li>Empréstimo/financiamento lançado sem separar juros da amortização</li>
+        <li>Categoria semanticamente incorreta para o fornecedor (análise por IA)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="card loading" id="loadingCard">
+    <div class="spinner"></div>
+    <p style="color:#1B3A6B;font-weight:600;font-size:15px;">Analisando lançamentos...</p>
+    <p style="color:#888;font-size:13px;margin-top:8px;">Aplicando 10 regras de auditoria sobre os dados</p>
+  </div>
+
+  <!-- Resultado -->
+  <div class="resultado" id="resultadoCard">
+    <div class="card">
+      <h2>✅ Auditoria Concluída</h2>
+      <p id="descResultado"></p>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <h3 style="color:#1B3A6B;font-size:15px;margin-bottom:12px;">Inconsistências por Tipo</h3>
+      <ul class="regras-lista" id="regrasList"></ul>
+
+      <a class="btn-download" id="linkDownload" href="#" download>
+        ⬇ BAIXAR RELATÓRIO EXCEL
+      </a>
+      <a class="btn-novo" href="/historico">📊 Ver histórico de relatórios</a>
+      <button class="btn-novo" onclick="novaAnalise()" style="margin-top:8px;">Analisar outro arquivo</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>O2 Inc — Assessoria Financeira | Sistema de Auditoria Automática</footer>
+
+<script>
+  const uploadArea  = document.getElementById('uploadArea');
+  const fileInput   = document.getElementById('fileInput');
+  const btnAuditar  = document.getElementById('btnAuditar');
+  const fileName    = document.getElementById('fileName');
+  let arquivoSelecionado = null;
+
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) selecionarArquivo(e.target.files[0]);
+  });
+
+  uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) selecionarArquivo(e.dataTransfer.files[0]);
+  });
+
+  function selecionarArquivo(file) {
+    arquivoSelecionado = file;
+    fileName.textContent = '📄 ' + file.name;
+    fileName.style.display = 'block';
+    document.getElementById('erroMsg').style.display = 'none';
+    verificarCampos();
+  }
+
+  function verificarCampos() {
+    const empresa = document.getElementById('inputEmpresa').value.trim();
+    btnAuditar.disabled = !(empresa && arquivoSelecionado);
+  }
+
+  async function iniciarAuditoria() {
+    if (!arquivoSelecionado) return;
+    document.getElementById('uploadCard').style.display  = 'none';
+    document.getElementById('loadingCard').style.display = 'block';
+
+    const form = new FormData();
+    form.append('arquivo', arquivoSelecionado);
+    form.append('empresa', document.getElementById('inputEmpresa').value.trim());
+
+    try {
+      const resp = await fetch('/auditar', { method: 'POST', body: form });
+      const data = await resp.json();
+
+      document.getElementById('loadingCard').style.display = 'none';
+
+      if (data.erro) {
+        document.getElementById('uploadCard').style.display = 'block';
+        const erroEl = document.getElementById('erroMsg');
+        erroEl.textContent = data.erro;
+        erroEl.style.display = 'block';
+        return;
+      }
+
+      exibirResultado(data);
+    } catch (err) {
+      document.getElementById('loadingCard').style.display = 'none';
+      document.getElementById('uploadCard').style.display  = 'block';
+      const erroEl = document.getElementById('erroMsg');
+      erroEl.textContent = 'Erro de conexão. Tente novamente.';
+      erroEl.style.display = 'block';
+    }
+  }
+
+  function exibirResultado(data) {
+    const pct = data.total_lancamentos > 0
+      ? ((data.total_erros / data.total_lancamentos) * 100).toFixed(1)
+      : 0;
+
+    document.getElementById('descResultado').textContent =
+      `${data.total_lancamentos.toLocaleString('pt-BR')} lançamentos analisados. ` +
+      `${data.total_erros} inconsistências encontradas (${pct}% do total).`;
+
+    const sev   = data.por_severidade || {};
+    const stats = [
+      { label: 'Total de Erros',   num: data.total_erros,    cls: '' },
+      { label: 'Críticos',         num: sev['CRÍTICO'] || 0, cls: 'critico' },
+      { label: 'Alta Severidade',  num: sev['ALTO']    || 0, cls: 'alto' },
+      { label: 'Média Severidade', num: sev['MÉDIO']   || 0, cls: 'medio' },
+    ];
+
+    document.getElementById('statGrid').innerHTML = stats.map(s =>
+      `<div class="stat ${s.cls}"><div class="num">${s.num}</div><div class="label">${s.label}</div></div>`
+    ).join('');
+
+    const regras = Object.entries(data.por_regra || {}).sort((a, b) => b[1] - a[1]);
+    document.getElementById('regrasList').innerHTML = regras.map(([r, q]) =>
+      `<li><span>${r}</span><span class="badge">${q}</span></li>`
+    ).join('');
+
+    document.getElementById('linkDownload').href = data.download_url;
+    document.getElementById('resultadoCard').style.display = 'block';
+  }
+
+  function novaAnalise() {
+    document.getElementById('resultadoCard').style.display = 'none';
+    document.getElementById('uploadCard').style.display    = 'block';
+    fileInput.value              = '';
+    fileName.style.display       = 'none';
+    btnAuditar.disabled          = true;
+    arquivoSelecionado           = null;
+  }
+</script>
+</body>
+</html>
