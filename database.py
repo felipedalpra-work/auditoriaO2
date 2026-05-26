@@ -5,7 +5,13 @@ import sqlite3
 import json
 import os
 
-DATA_DIR    = os.getenv('AUDITORIA_DATA_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'))
+def _default_data_dir():
+    # Vercel serverless has read-only project files; writable path is /tmp.
+    if os.getenv('VERCEL') == '1':
+        return '/tmp/o2_data'
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+
+DATA_DIR    = os.getenv('AUDITORIA_DATA_DIR', _default_data_dir())
 DB_PATH     = os.path.join(DATA_DIR, 'auditoria.db')
 REPORTS_DIR = os.path.join(DATA_DIR, 'reports')
 
