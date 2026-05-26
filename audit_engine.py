@@ -644,101 +644,6 @@ def regra_juros_sem_amortizacao(df):
     return erros
 
 
-def regra_categoria_semantica(df):
-    """Regra 11: Fornecedor categorizado em categoria semanticamente incorreta (via OpenAI).
-
-    Extrai todos os pares únicos (fornecedor, categoria) e envia em uma única chamada
-    ao GPT-4o-mini para identificar combinações que não fazem sentido semântico.
-    Se a chave de API não estiver configurada, a regra é silenciosamente ignorada.
-    """
-    import os
-    import json
-
-    try:
-        from openai import OpenAI
-    except ImportError:
-        return []
-
-    api_key = os.getenv('OPENAI_API_KEY', '').strip()
-    if not api_key or api_key.startswith('sk-...'):
-        return []
-
-    client = OpenAI(api_key=api_key)
-
-    df2 = df.copy()
-    df2['_fornecedor'] = df2['Cliente ou Fornecedor (Razão Social)'].astype(str).str.strip()
-    df2['_cat']        = df2['Categoria'].astype(str).str.strip()
-    col_e = 'Data de Emissão (completa)'
-
-    # Pares únicos com filtro de valores inválidos
-    invalidos = {'nan', 'N/D', 'None', '', 'Não informado'}
-    pares_df = (
-        df2[~df2['_fornecedor'].isin(invalidos) & ~df2['_cat'].isin(invalidos)]
-        .groupby(['_fornecedor', '_cat'])
-        .size()
-        .reset_index(name='_qtd')
-    )
-
-    if pares_df.empty:
-        return []
-
-    CHUNK = 80  # pares por chamada para não estourar o contexto
-    pares_errados = []
-
-    for inicio in range(0, len(pares_df), CHUNK):
-        chunk = pares_df.iloc[inicio: inicio + CHUNK]
-        lista = [
-            {'fornecedor': r['_fornecedor'], 'categoria': r['_cat']}
-            for _, r in chunk.iterrows()
-        ]
-
-        prompt = (
-            'Você é um auditor financeiro brasileiro. '
-            'Analise os pares de fornecedor e categoria de lançamento contábil abaixo.\n'
-            'Retorne APENAS os pares onde a categoria está claramente errada para aquele fornecedor.\n'
-            'Seja conservador: sinalize somente quando tiver alta confiança. '
-            'Ignore casos ambíguos.\n\n'
-            f'Pares:\n{json.dumps(lista, ensure_ascii=False)}\n\n'
-            'Responda em JSON: {"inconsistencias": [{"fornecedor": "...", "categoria": "...", "motivo": "..."}]}'
-        )
-
-        try:
-            resp = client.chat.completions.create(
-                model='gpt-4o-mini',
-                messages=[{'role': 'user', 'content': prompt}],
-                response_format={'type': 'json_object'},
-                temperature=0,
-            )
-            resultado = json.loads(resp.choices[0].message.content)
-            pares_errados.extend(resultado.get('inconsistencias', []))
-        except Exception:
-            continue
-
-    erros = []
-    for par in pares_errados:
-        forn   = par.get('fornecedor', '')
-        cat    = par.get('categoria', '')
-        motivo = par.get('motivo', '')
-        mask   = (df2['_fornecedor'] == forn) & (df2['_cat'] == cat)
-        for _, row in df2[mask].iterrows():
-            data_e = pd.to_datetime(row.get(col_e), errors='coerce')
-            erros.append({
-                'regra':          'Categoria Semanticamente Incorreta',
-                'severidade':     'ALTO',
-                'linha_arquivo':  _linha_arquivo_row(row),
-                'aba_arquivo_origem': _aba_arquivo_row(row),
-                'fornecedor':     limpar_valor(row.get('Cliente ou Fornecedor (Razão Social)')) or 'N/D',
-                'cnpj':           limpar_valor(row.get('CNPJ/CPF')) or 'N/D',
-                'valor':          row.get('Valor da Conta', 0),
-                'data_emissao':   data_e.strftime('%d/%m/%Y') if pd.notna(data_e) else 'N/D',
-                'data_vencimento':'N/D',
-                'categoria':      cat,
-                'observacao':     str(row.get('Observação da Conta', '')),
-                'detalhe':        f'Categoria "{cat}" parece incorreta para este fornecedor — {motivo}',
-            })
-    return erros
-
-
 # ── EXECUTOR ─────────────────────────────────────────────────────────────────
 
 ORDEM_SEVERIDADE = {'CRÍTICO': 0, 'ALTO': 1, 'MÉDIO': 2, 'BAIXO': 3}
@@ -756,7 +661,6 @@ REGRAS = [
     regra_competencia_distante,
     regra_parcelas_data_registro_identica,
     regra_juros_sem_amortizacao,
-    regra_categoria_semantica,  # requer OPENAI_API_KEY no .env
 ]
 
 
