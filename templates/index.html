@@ -356,17 +356,6 @@
   });
 
   function selecionarArquivo(file) {
-    const limiteBytes = 4 * 1024 * 1024; // compatível com deploy Vercel
-    if (file.size > limiteBytes) {
-      const erroEl = document.getElementById('erroMsg');
-      erroEl.textContent = 'Arquivo maior que 4MB. Reduza o arquivo para processar no ambiente atual.';
-      erroEl.style.display = 'block';
-      arquivoSelecionado = null;
-      fileInput.value = '';
-      fileName.style.display = 'none';
-      verificarCampos();
-      return;
-    }
     arquivoSelecionado = file;
     fileName.textContent = '📄 ' + file.name;
     fileName.style.display = 'block';
@@ -390,23 +379,11 @@
 
     try {
       const resp = await fetch('/auditar', { method: 'POST', body: form });
-      const raw = await resp.text();
-      let data = null;
-      try { data = JSON.parse(raw); } catch (_e) { data = null; }
+      const data = await resp.json();
 
       document.getElementById('loadingCard').style.display = 'none';
 
-      if (!resp.ok) {
-        document.getElementById('uploadCard').style.display = 'block';
-        const erroEl = document.getElementById('erroMsg');
-        erroEl.textContent = (data && data.erro)
-          ? data.erro
-          : `Falha na auditoria (HTTP ${resp.status}).`;
-        erroEl.style.display = 'block';
-        return;
-      }
-
-      if (data && data.erro) {
+      if (data.erro) {
         document.getElementById('uploadCard').style.display = 'block';
         const erroEl = document.getElementById('erroMsg');
         erroEl.textContent = data.erro;
@@ -414,7 +391,7 @@
         return;
       }
 
-      exibirResultado(data || {});
+      exibirResultado(data);
     } catch (err) {
       document.getElementById('loadingCard').style.display = 'none';
       document.getElementById('uploadCard').style.display  = 'block';
