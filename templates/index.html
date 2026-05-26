@@ -288,9 +288,11 @@
     <div class="erro-msg" id="erroMsg"></div>
 
     <div class="regras-info">
-      <h4>Regras de Auditoria Aplicadas (11 regras)</h4>
+      <h4>Regras de Auditoria Aplicadas (12 regras)</h4>
       <ul>
-        <li>Data de emissão posterior à data de vencimento</li>
+        <li>Data de emissão mais de 60 dias após vencimento</li>
+        <li>Data de vencimento igual à data de emissão</li>
+        <li>Data de vencimento mais de 60 dias após emissão</li>
         <li>Sinal de valor incorreto (Pagar positivo / Receber negativo)</li>
         <li>Lançamentos duplicados (mesmo CNPJ, valor, data e parcela)</li>
         <li>Recorrências mensais com mês faltando</li>
@@ -300,7 +302,6 @@
         <li>Emissão e registro distam mais de 60 dias (lançamento no mês errado)</li>
         <li>Data de registro idêntica em todas as parcelas (bug de replicação do Omie)</li>
         <li>Empréstimo/financiamento lançado sem separar juros da amortização</li>
-        <li>Categoria semanticamente incorreta para o fornecedor (análise por IA)</li>
       </ul>
     </div>
   </div>
@@ -309,7 +310,7 @@
   <div class="card loading" id="loadingCard">
     <div class="spinner"></div>
     <p style="color:#1B3A6B;font-weight:600;font-size:15px;">Analisando lançamentos...</p>
-    <p style="color:#888;font-size:13px;margin-top:8px;">Aplicando 10 regras de auditoria sobre os dados</p>
+    <p style="color:#888;font-size:13px;margin-top:8px;">Aplicando 12 regras de auditoria sobre os dados</p>
   </div>
 
   <!-- Resultado -->

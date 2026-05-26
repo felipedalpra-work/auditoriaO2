@@ -85,6 +85,22 @@ def carregar_df(filepath):
             'data de emissao',
             'data emissao',
         ],
+        'Data de Vencimento (completa)': [
+            'data de vencimento (completa)',
+            'data de vencimento completa',
+            'data vencimento (completa)',
+            'data vencimento completa',
+            'data de vencimento',
+            'data vencimento',
+        ],
+        'Data de Registro (completa)': [
+            'data de registro (completa)',
+            'data de registro completa',
+            'data registro (completa)',
+            'data registro completa',
+            'data de registro',
+            'data registro',
+        ],
         'Tipo': [
             'tipo',
         ],
@@ -134,6 +150,8 @@ def regra_emissao_maior_vencimento(df):
     erros = []
     col_e = 'Data de Emissão (completa)'
     col_v = 'Data de Vencimento (completa)'
+    if col_e not in df.columns or col_v not in df.columns:
+        return erros
     subset = df[df[col_e].notna() & df[col_v].notna()].copy()
     subset[col_e] = pd.to_datetime(subset[col_e], errors='coerce')
     subset[col_v] = pd.to_datetime(subset[col_v], errors='coerce')
@@ -163,6 +181,8 @@ def regra_vencimento_igual_emissao(df):
     erros = []
     col_e = 'Data de Emissão (completa)'
     col_v = 'Data de Vencimento (completa)'
+    if col_e not in df.columns or col_v not in df.columns:
+        return erros
     subset = df[df[col_e].notna() & df[col_v].notna()].copy()
     subset[col_e] = pd.to_datetime(subset[col_e], errors='coerce')
     subset[col_v] = pd.to_datetime(subset[col_v], errors='coerce')
@@ -191,6 +211,8 @@ def regra_vencimento_maior_emissao(df):
     erros = []
     col_e = 'Data de Emissão (completa)'
     col_v = 'Data de Vencimento (completa)'
+    if col_e not in df.columns or col_v not in df.columns:
+        return erros
     subset = df[df[col_e].notna() & df[col_v].notna()].copy()
     subset[col_e] = pd.to_datetime(subset[col_e], errors='coerce')
     subset[col_v] = pd.to_datetime(subset[col_v], errors='coerce')
