@@ -18,7 +18,9 @@ from database import (
 )
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+IS_VERCEL = os.getenv('VERCEL') == '1'
+# Vercel Serverless has stricter body/runtime limits than local/VM deploys.
+app.config['MAX_CONTENT_LENGTH'] = (4 if IS_VERCEL else 50) * 1024 * 1024
 
 UPLOAD_FOLDER = '/tmp/o2_uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -31,6 +33,14 @@ EXTENSOES_PERMITIDAS = {'xlsx', 'xls'}
 
 def permitido(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in EXTENSOES_PERMITIDAS
+
+
+@app.errorhandler(413)
+def arquivo_muito_grande(_err):
+    limite_mb = app.config['MAX_CONTENT_LENGTH'] // (1024 * 1024)
+    return jsonify({
+        'erro': f'Arquivo excede o limite de {limite_mb}MB para este ambiente.'
+    }), 413
 
 
 # ── Páginas ──────────────────────────────────────────────────────────────────
