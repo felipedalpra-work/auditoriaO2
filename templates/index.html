@@ -339,6 +339,7 @@
   const fileInput   = document.getElementById('fileInput');
   const btnAuditar  = document.getElementById('btnAuditar');
   const fileName    = document.getElementById('fileName');
+  const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // Limite prático para deploy serverless (ex.: Vercel)
   let arquivoSelecionado = null;
 
   fileInput.addEventListener('change', e => {
@@ -354,6 +355,17 @@
   });
 
   function selecionarArquivo(file) {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      const erroEl = document.getElementById('erroMsg');
+      erroEl.textContent = 'Arquivo acima de 4MB. No deploy atual, use um arquivo menor.';
+      erroEl.style.display = 'block';
+      arquivoSelecionado = null;
+      fileInput.value = '';
+      fileName.style.display = 'none';
+      verificarCampos();
+      return;
+    }
+
     arquivoSelecionado = file;
     fileName.textContent = '📄 ' + file.name;
     fileName.style.display = 'block';
@@ -377,14 +389,20 @@
 
     try {
       const resp = await fetch('/auditar', { method: 'POST', body: form });
-      const data = await resp.json();
+      const raw = await resp.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (_) {
+        data = {};
+      }
 
       document.getElementById('loadingCard').style.display = 'none';
 
-      if (data.erro) {
+      if (!resp.ok || data.erro) {
         document.getElementById('uploadCard').style.display = 'block';
         const erroEl = document.getElementById('erroMsg');
-        erroEl.textContent = data.erro;
+        erroEl.textContent = data.erro || `Falha ao auditar (HTTP ${resp.status}).`;
         erroEl.style.display = 'block';
         return;
       }

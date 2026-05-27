@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from flask import Flask, request, render_template, send_file, jsonify
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from audit_engine import executar_auditoria
 from excel_generator import gerar_excel
@@ -25,6 +26,11 @@ EXTENSOES_PERMITIDAS = {'xlsx', 'xls'}
 
 def permitido(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in EXTENSOES_PERMITIDAS
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_large_file(_err):
+    return jsonify({'erro': 'Arquivo muito grande. Reduza o tamanho e tente novamente.'}), 413
 
 
 # ── Páginas ──────────────────────────────────────────────────────────────────
