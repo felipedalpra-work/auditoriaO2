@@ -339,7 +339,7 @@
   const fileInput   = document.getElementById('fileInput');
   const btnAuditar  = document.getElementById('btnAuditar');
   const fileName    = document.getElementById('fileName');
-  const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // Limite prático para deploy serverless (ex.: Vercel)
+  const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Alinhado com o limite do backend
   let arquivoSelecionado = null;
 
   fileInput.addEventListener('change', e => {
@@ -357,7 +357,7 @@
   function selecionarArquivo(file) {
     if (file.size > MAX_UPLOAD_BYTES) {
       const erroEl = document.getElementById('erroMsg');
-      erroEl.textContent = 'Arquivo acima de 4MB. No deploy atual, use um arquivo menor.';
+      erroEl.textContent = 'Arquivo acima de 50MB. Reduza o tamanho e tente novamente.';
       erroEl.style.display = 'block';
       arquivoSelecionado = null;
       fileInput.value = '';
