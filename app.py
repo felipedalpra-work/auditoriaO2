@@ -11,20 +11,14 @@ from werkzeug.utils import secure_filename
 
 from audit_engine import executar_auditoria
 from excel_generator import gerar_excel
-from database import (
-    init_db, salvar_relatorio, listar_empresas,
-    listar_relatorios_empresa, buscar_relatorio,
-    REPORTS_DIR,
-)
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 UPLOAD_FOLDER = '/tmp/o2_uploads'
+REPORTS_DIR = '/tmp/o2_reports'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
-
-init_db()
 
 EXTENSOES_PERMITIDAS = {'xlsx', 'xls'}
 
@@ -42,7 +36,7 @@ def index():
 
 @app.route('/historico')
 def historico():
-    return render_template('historico.html')
+    return render_template('index.html')
 
 
 @app.route('/healthz')
@@ -89,25 +83,13 @@ def auditar():
     gerar_excel(resultado, caminho_excel, nome_original, empresa, source_path=caminho_upload)
     os.remove(caminho_upload)
 
-    rid = salvar_relatorio(
-        empresa             = empresa,
-        data_analise        = resultado['data_analise'],
-        nome_arquivo_origem = nome_original,
-        total_lancamentos   = resultado['total_lancamentos'],
-        total_erros         = resultado['total_erros'],
-        por_severidade      = resultado['por_severidade'],
-        por_regra           = resultado['por_regra'],
-        caminho_arquivo     = caminho_excel,
-    )
-
     return jsonify({
         'sucesso':           True,
-        'relatorio_id':      rid,
         'total_lancamentos': resultado['total_lancamentos'],
         'total_erros':       resultado['total_erros'],
         'por_severidade':    resultado['por_severidade'],
         'por_regra':         resultado['por_regra'],
-        'download_url':      f'/download/relatorio/{rid}',
+        'download_url':      f'/download/arquivo/{nome_excel}',
         # Amostra para depuração rápida no frontend/API sem inflar demais o payload.
         'erros_debug':       resultado.get('erros', [])[:100],
     })
@@ -115,84 +97,17 @@ def auditar():
 
 # ── Download ──────────────────────────────────────────────────────────────────
 
-@app.route('/download/relatorio/<int:rid>')
-def download_relatorio(rid):
-    r = buscar_relatorio(rid)
-    if not r:
-        return 'Relatório não encontrado.', 404
-    caminho = r['caminho_arquivo']
+@app.route('/download/arquivo/<nome_arquivo>')
+def download_arquivo(nome_arquivo):
+    nome_safe = secure_filename(nome_arquivo)
+    caminho = os.path.join(REPORTS_DIR, nome_safe)
     if not os.path.exists(caminho):
         return 'Arquivo não encontrado no servidor.', 404
-    empresa_safe = secure_filename(r['empresa']) or 'relatorio'
-    data_safe    = r['data_analise'].replace('/', '-').replace(':', '-').replace(' ', '_')[:16]
     return send_file(
         caminho,
         as_attachment=True,
-        download_name=f'auditoria_{empresa_safe}_{data_safe}.xlsx',
+        download_name=nome_safe,
     )
-
-
-# ── API histórico ─────────────────────────────────────────────────────────────
-
-@app.route('/api/empresas')
-def api_empresas():
-    return jsonify(listar_empresas())
-
-
-@app.route('/api/relatorios')
-def api_relatorios():
-    empresa = request.args.get('empresa', '').strip()
-    if not empresa:
-        return jsonify([])
-    relatorios = listar_relatorios_empresa(empresa)
-    for r in relatorios:
-        r['download_url'] = f'/download/relatorio/{r["id"]}'
-        r.pop('caminho_arquivo', None)
-    return jsonify(relatorios)
-
-
-@app.route('/api/comparar')
-def api_comparar():
-    try:
-        id1 = int(request.args.get('id1', 0))
-        id2 = int(request.args.get('id2', 0))
-    except ValueError:
-        return jsonify({'erro': 'IDs inválidos'}), 400
-
-    r1 = buscar_relatorio(id1)
-    r2 = buscar_relatorio(id2)
-    if not r1 or not r2:
-        return jsonify({'erro': 'Relatório não encontrado'}), 404
-
-    def delta(a, b):
-        d = b - a
-        pct = (d / a * 100) if a != 0 else (100.0 if b > 0 else 0.0)
-        return {'a': a, 'b': b, 'delta': d, 'delta_pct': round(pct, 1)}
-
-    sev_comp = {}
-    for k in ['CRÍTICO', 'ALTO', 'MÉDIO', 'BAIXO']:
-        sev_comp[k] = delta(r1['por_severidade'].get(k, 0), r2['por_severidade'].get(k, 0))
-
-    all_rules = set(list(r1['por_regra'].keys()) + list(r2['por_regra'].keys()))
-    regra_comp = {
-        regra: delta(r1['por_regra'].get(regra, 0), r2['por_regra'].get(regra, 0))
-        for regra in all_rules
-    }
-
-    for r in [r1, r2]:
-        r['download_url'] = f'/download/relatorio/{r["id"]}'
-        r.pop('caminho_arquivo', None)
-
-    return jsonify({
-        'relatorio_a': r1,
-        'relatorio_b': r2,
-        'comparacao': {
-            'total_lancamentos': delta(r1['total_lancamentos'], r2['total_lancamentos']),
-            'total_erros':       delta(r1['total_erros'],       r2['total_erros']),
-            'por_severidade':    sev_comp,
-            'por_regra':         regra_comp,
-        },
-    })
 
 
 if __name__ == '__main__':
